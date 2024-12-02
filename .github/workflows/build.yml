@@ -23,11 +23,8 @@ jobs:
           java-version: '17'
           distribution: 'adopt'
 
-      - name: Build with Gradle
+      - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
-        with:
-          arguments: build
 
-      - name: Build the project with Gradle
-        run: |
-          ./gradlew build
+      - name: Build With Gradle
+        run: ./gradlew build
