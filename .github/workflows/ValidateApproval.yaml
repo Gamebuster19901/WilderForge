@@ -64,7 +64,7 @@ jobs:
           DESCRIPTION="${{ env.description }}"
 
           CONTEXT="Approval Validation"
-          APPROVED_SHA="${{ env.approved_sha }}"
+          APPROVED_SHA="${{ github.event.review.commit_id }}"
 
           TARGET_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
       
