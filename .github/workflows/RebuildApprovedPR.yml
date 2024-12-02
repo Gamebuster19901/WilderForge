@@ -25,8 +25,14 @@ jobs:
           PR_NUMBER=$(echo "$PR_DETAILS" | jq -r '.number')
           echo "PR Number: $PR_NUMBER"  # Debugging: output the PR number
 
-          PR_SHA=$(jq -r '.pull_request.head.sha' <<< '${{ toJson(github.event.issue) }}')
+          # Get the commit SHA directly from the pull request head object
+          PR_SHA=$(echo "$PR_DETAILS" | jq -r '.head.sha')
           echo "PR SHA: $PR_SHA"  # Debugging: output the PR SHA
+
+          if [ -z "$PR_SHA" ]; then
+            echo "Pull request head commit SHA is null. Exiting."
+            exit 1
+          fi
 
           # Get the list of workflow runs for the repository
           WORKFLOWS=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
