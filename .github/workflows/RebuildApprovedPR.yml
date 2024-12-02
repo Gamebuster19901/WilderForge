@@ -12,58 +12,53 @@ jobs:
       github.event.comment.body == '@WilderForge rebuild' &&
       github.event.issue.pull_request != null
     steps:
-      - name: Fetch Pull Request Details
-        id: fetch_pr_details
+      - name: Fetch Approved SHA from Previous Workflow
+        id: fetch_approved_sha
         run: |
+          # Fetch the outputs from the `Validate Approval` workflow
           PR_URL=$(jq -r '.pull_request.url' <<< '${{ toJson(github.event.issue) }}')
-
           echo "Fetching pull request details from: $PR_URL"
-
+          
           PR_DETAILS=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" "$PR_URL")
-          PR_SHA=$(echo "$PR_DETAILS" | jq -r '.head.sha')
-
-          echo "Pull Request SHA: $PR_SHA"
-          echo "pr_sha=$PR_SHA" >> $GITHUB_ENV
-
-      - name: Fetch Approved Status
-        id: fetch_status
-        run: |
-          PR_SHA=${{ env.pr_sha }}
-          CONTEXT="Approval Validation"
-
-          echo "Fetching commit status for PR SHA: $PR_SHA in context: $CONTEXT"
-
-          # Fetch commit status from GitHub API
-          RESPONSE=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-            "https://api.github.com/repos/${{ github.repository }}/commits/${PR_SHA}/status")
-
-          CONTEXT_STATUS=$(echo "$RESPONSE" | jq -r --arg CONTEXT "$CONTEXT" \
-            '.statuses[] | select(.context == $CONTEXT) | .state')
-          APPROVED_SHA=$(echo "$RESPONSE" | jq -r --arg CONTEXT "$CONTEXT" \
-            '.statuses[] | select(.context == $CONTEXT) | .description | match("for commit (.+)").captures[0].string')
-
-          echo "Context Status: $CONTEXT_STATUS"
-          echo "Approved SHA: $APPROVED_SHA"
-
-          echo "context_status=$CONTEXT_STATUS" >> $GITHUB_ENV
-          echo "approved_sha=$APPROVED_SHA" >> $GITHUB_ENV
-
-          if [ "$CONTEXT_STATUS" != "success" ]; then
-            echo "Approval Validation context status is not 'success'. Exiting."
+          PR_NUMBER=$(echo "$PR_DETAILS" | jq -r '.number')
+          
+          # Get the list of workflow runs for the repository
+          WORKFLOWS=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/runs")
+          
+          # Find the latest completed run of the 'Validate Approval' workflow
+          APPROVAL_RUN=$(echo "$WORKFLOWS" | jq -r \
+            '.workflow_runs[] | select(.name == "Validate Approval" and .status == "completed") | .id' | head -n 1)
+          
+          if [ -z "$APPROVAL_RUN" ]; then
+            echo "No completed 'Validate Approval' workflow runs found. Exiting."
             exit 1
           fi
+
+          # Fetch the output of the 'Validate Approval' workflow
+          OUTPUTS=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/runs/$APPROVAL_RUN/jobs")
+          
+          APPROVED_SHA=$(echo "$OUTPUTS" | jq -r \
+            '.jobs[].steps[] | select(.name == "Setting Approved SHA") | .outputs.approved_sha')
+          
+          if [ -z "$APPROVED_SHA" ]; then
+            echo "Approved SHA not found in workflow outputs. Exiting."
+            exit 1
+          fi
+
+          echo "Approved SHA: $APPROVED_SHA"
+          echo "approved_sha=$APPROVED_SHA" >> $GITHUB_ENV
 
       - name: Verify Latest Commit Matches Approved SHA
         id: verify_sha
         run: |
-          PR_SHA=${{ env.pr_sha }}
-          APPROVED_SHA=${{ env.approved_sha }}
-
+          PR_SHA=$(jq -r '.pull_request.head.sha' <<< '${{ toJson(github.event.issue) }}')
           echo "Latest commit SHA: $PR_SHA"
-          echo "Approved commit SHA: $APPROVED_SHA"
+          echo "Approved commit SHA: ${{ env.approved_sha }}"
 
-          if [ "$PR_SHA" != "$APPROVED_SHA" ]; then
-            echo "Latest commit SHA ($PR_SHA) does not match approved SHA ($APPROVED_SHA). Exiting."
+          if [ "$PR_SHA" != "${{ env.approved_sha }}" ]; then
+            echo "Latest commit SHA ($PR_SHA) does not match approved SHA (${{ env.approved_sha }}). Exiting."
             exit 1
           fi
           echo "Latest commit matches the approved SHA. Proceeding with rebuild."
