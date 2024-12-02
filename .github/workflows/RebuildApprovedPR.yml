@@ -12,7 +12,7 @@ jobs:
       github.event.comment.body == '@WilderForge rebuild' &&
       github.event.issue.pull_request != null
     steps:
-      - name: Fetch Latest Workflow Runs for Validate Approval
+      - name: Fetch Approval Workflow Run
         id: fetch_approval_run
         run: |
           # Fetch the pull request details
@@ -52,7 +52,7 @@ jobs:
           # Save the approval run ID to environment variable for use in later steps
           echo "APPROVAL_RUN=$APPROVAL_RUN" >> $GITHUB_ENV
 
-      - name: Check If Validate Approval Workflow Completed Successfully
+      - name: Check Approval
         id: check_approval_status
         run: |
           # Fetch the details of the approval workflow run using the saved APPROVAL_RUN ID
