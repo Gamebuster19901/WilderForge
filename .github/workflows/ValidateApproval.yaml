@@ -36,6 +36,9 @@ jobs:
       - name: Post Status Check
         if: always()  # Ensures this step always runs
         run: |
+
+          echo "${{ env.approved_sha }}"
+        
           # Check the outcome of the validation step
           if [ "${{ steps.validate_sha.outcome }}" == "success" ]; then
             STATUS="success"
