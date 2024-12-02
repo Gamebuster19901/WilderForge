@@ -12,7 +12,6 @@ jobs:
     runs-on: [self-hosted, linux]  # Specifies a self-hosted runner
 
     steps:
-      # Step 1: Checkout the repository at SHA
       - name: Checkout the repository at SHA
         uses: actions/checkout@v3
         with:
@@ -24,13 +23,11 @@ jobs:
           java-version: '17'
           distribution: 'adopt'
 
-      # Step 2: Set up Gradle
       - name: Build with Gradle
         uses: gradle/gradle-build-action@v3.5.0
         with:
           arguments: build
 
-      # Step 3: Run the Gradle build
       - name: Build the project with Gradle
         run: |
           ./gradlew build
