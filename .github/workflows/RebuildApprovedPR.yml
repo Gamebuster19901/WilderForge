@@ -7,7 +7,7 @@ on:
 jobs:
   rebuild_approved_pr:
     runs-on: ubuntu-latest
-    if: |
+    if: >
       github.event.comment.user.login == 'Gamebuster19901' &&
       github.event.comment.body == '@WilderForge rebuild' &&
       github.event.issue.pull_request != null
@@ -18,7 +18,9 @@ jobs:
           PR_SHA=$(jq -r '.pull_request.head.sha' <<< "${{ toJson(github.event.issue) }}")
           CONTEXT="Approval Validation"
 
-          # Fetch the commit status for the context
+          echo "Fetching commit status for PR SHA: $PR_SHA in context: $CONTEXT"
+
+          # Fetch commit status from GitHub API
           RESPONSE=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
             "https://api.github.com/repos/${{ github.repository }}/commits/${PR_SHA}/status")
 
@@ -42,6 +44,9 @@ jobs:
         id: verify_sha
         run: |
           LATEST_SHA=$(jq -r '.pull_request.head.sha' <<< "${{ toJson(github.event.issue) }}")
+          echo "Latest commit SHA: $LATEST_SHA"
+          echo "Approved commit SHA: ${{ env.approved_sha }}"
+
           if [ "$LATEST_SHA" != "${{ env.approved_sha }}" ]; then
             echo "Latest commit SHA ($LATEST_SHA) does not match approved SHA (${{ env.approved_sha }}). Exiting."
             exit 1
@@ -51,4 +56,3 @@ jobs:
       - name: Trigger Rebuild
         run: |
           echo "Rebuilding approved PR..."
-          # build commands here
