@@ -58,8 +58,8 @@ jobs:
         if:
           always()
         run: |
-          STATUS="${{ steps.checking_approval.conclusion }}"
-          DESCRIPTION="${{ steps.checking_approval.description }}"
+          STATUS="${{ steps.checking_approval.outputs.conclusion }}"
+          DESCRIPTION="${{ steps.checking_approval.outputs.description }}"
 
           CONTEXT="Approval Validation"
           APPROVED_SHA="${{ steps.approve_sha.outputs.approved_sha }}"
