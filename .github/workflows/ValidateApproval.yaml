@@ -8,7 +8,7 @@ jobs:
   approve_and_run:
     runs-on: ubuntu-latest
     outputs:
-      pr_sha: ${{ steps.approve_sha.outputs.approved_sha }}
+      approved_sha: ${{ steps.approve_sha.outputs.approved_sha }}
     if: |
       (
         github.event.review.state == 'approved' &&
