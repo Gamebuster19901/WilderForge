@@ -7,8 +7,6 @@ on:
 jobs:
   approve_and_run:
     runs-on: ubuntu-latest
-    outputs:
-      approved_sha: ${{ steps.approve_sha.outputs.approved_sha }}
     if: |
       (
         github.event.review.state == 'approved' &&
@@ -49,10 +47,6 @@ jobs:
             echo "description=$DESC" >> "$GITHUB_ENV"
             exit 1
           fi
-
-      - name: Setting Approved SHA
-        id: "approve_sha"
-        run: echo "approved_sha=${{ github.event.review.commit_id }}" >> $GITHUB_ENV
 
       - name: Post Status Check
         if:
