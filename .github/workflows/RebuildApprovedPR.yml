@@ -49,8 +49,6 @@ jobs:
             exit 1
           fi
 
-          echo "This  workflow run: $APPROVAL_RUN"
-
           # Save the approval run ID to environment variable for use in later steps
           echo "APPROVAL_RUN=$APPROVAL_RUN" >> $GITHUB_ENV
 
