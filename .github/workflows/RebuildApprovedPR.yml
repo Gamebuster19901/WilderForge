@@ -37,7 +37,7 @@ jobs:
           # Get the list of workflow runs for the repository
           WORKFLOWS=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
             "https://api.github.com/repos/${{ github.repository }}/actions/runs")
-          echo "Workflow Runs: $WORKFLOWS"  # Debugging: output workflow runs data
+          # echo "Workflow Runs: $WORKFLOWS"  # Debugging: output workflow runs data
 
           # Find the latest completed run of the 'Validate Approval' workflow that matches the head SHA
           APPROVAL_RUN=$(echo "$WORKFLOWS" | jq -r \
