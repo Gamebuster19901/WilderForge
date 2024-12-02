@@ -29,15 +29,25 @@ jobs:
       - name: Checking Approval
         id: "checking_approval"
         run: |
+          DESC = null
           if [[ "${{ github.event.review.body }}" == approved* ]]; then
-            echo "${{ github.event.review.user.login }} APPROVED build for ${{ github.event.review.commit_id }}"
+            DESC = "${{ github.event.review.user.login }} APPROVED build for ${{ github.event.review.commit_id }}"
+            echo DESC
+            echo "conclusion=success" >> $GITHUB_ENV"
+            echo "description=$DESC >> $GITHUB_ENV"
             exit 0
           elif [[ "${{ github.event.review.body }}" == reject* ]]; then
-            echo "${{ github.event.review.user.login }} REJECTED build for ${{ github.event.review.commit_id }}"
+            DESC = "${{ github.event.review.user.login }} REJECTED build for ${{ github.event.review.commit_id }}"
+            echo DESC
+            echo "conclusion=failure" >> $GITHUB_ENV"
+            echo "description=$DESC >> $GITHUB_ENV"
             exit 1
           else
-            echo "Assertion Error: Review body expected start with 'approved' or 'reject'. This step should have been skipped but it ran anyway!"
-            exit -1
+            DESC = "Assertion Error: Review body expected start with 'approved' or 'reject'. This step should have been skipped but it ran anyway!"
+            echo DESC
+            echo "conclusion=failure" >> $GITHUB_ENV"
+            echo "description=$DESC >> $GITHUB_ENV"
+            exit 1
           fi
 
       - name: Setting Approved SHA
@@ -45,15 +55,11 @@ jobs:
         run: echo "approved_sha=${{ github.event.review.commit_id }}" >> $GITHUB_ENV
 
       - name: Post Status Check
+        if:
+          always()
         run: |
-          # Check the outcome of the validation step
-          if [ "${{ steps.checking_approval.outcome }}" == "success" ]; then
-            STATUS="success"
-            DESCRIPTION="Approval validated for commit"
-          else
-            STATUS="failure"
-            DESCRIPTION="Approval validation: failed"
-          fi
+          STATUS="${{ steps.checking_approval.conclusion }}"
+          DESCRIPTION="${{ steps.checking_approval.description }}"
 
           CONTEXT="Approval Validation"
           APPROVED_SHA="${{ steps.approve_sha.outputs.approved_sha }}"
