@@ -15,7 +15,8 @@ jobs:
       - name: Fetch Approved Status
         id: fetch_status
         run: |
-          PR_SHA=$(jq -r '.pull_request.head.sha' <<< "${{ toJson(github.event.issue) }}")
+          # Extract PR SHA using jq safely
+          PR_SHA=$(echo '${{ toJson(github.event.issue) }}' | jq -r '.pull_request.head.sha')
           CONTEXT="Approval Validation"
 
           echo "Fetching commit status for PR SHA: $PR_SHA in context: $CONTEXT"
@@ -24,10 +25,10 @@ jobs:
           RESPONSE=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
             "https://api.github.com/repos/${{ github.repository }}/commits/${PR_SHA}/status")
 
-          CONTEXT_STATUS=$(jq -r --arg CONTEXT "$CONTEXT" \
-            '.statuses[] | select(.context == $CONTEXT) | .state' <<< "$RESPONSE")
-          APPROVED_SHA=$(jq -r --arg CONTEXT "$CONTEXT" \
-            '.statuses[] | select(.context == $CONTEXT) | .description | match("for commit (.+)").captures[0].string' <<< "$RESPONSE")
+          CONTEXT_STATUS=$(echo "$RESPONSE" | jq -r --arg CONTEXT "$CONTEXT" \
+            '.statuses[] | select(.context == $CONTEXT) | .state')
+          APPROVED_SHA=$(echo "$RESPONSE" | jq -r --arg CONTEXT "$CONTEXT" \
+            '.statuses[] | select(.context == $CONTEXT) | .description | match("for commit (.+)").captures[0].string')
 
           echo "Context Status: $CONTEXT_STATUS"
           echo "Approved SHA: $APPROVED_SHA"
