@@ -47,7 +47,7 @@ jobs:
       - name: Post Status Check
         run: |
           # Check the outcome of the validation step
-          if [ "${{ steps.validate_sha.outcome }}" == "success" ]; then
+          if [ "${{ steps.checking_approval.outcome }}" == "success" ]; then
             STATUS="success"
             DESCRIPTION="Approval validated for commit"
           else
