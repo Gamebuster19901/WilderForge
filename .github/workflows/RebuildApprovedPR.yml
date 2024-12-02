@@ -50,14 +50,17 @@ jobs:
           fi
 
           echo "Found 'Validate Approval' workflow run: $APPROVAL_RUN"
-      
+
+          # Save the approval run ID to environment variable for use in later steps
+          echo "APPROVAL_RUN=$APPROVAL_RUN" >> $GITHUB_ENV
+
       - name: Check If Validate Approval Workflow Completed Successfully
         id: check_approval_status
         run: |
-          # Check the status of the 'Validate Approval' workflow
+          # Fetch the details of the approval workflow run using the saved APPROVAL_RUN ID
           APPROVAL_STATUS=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-            "https://api.github.com/repos/${{ github.repository }}/actions/runs/$APPROVAL_RUN")
-          
+            "https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ env.APPROVAL_RUN }}")
+
           CONCLUSION=$(echo "$APPROVAL_STATUS" | jq -r '.conclusion')
           STATUS=$(echo "$APPROVAL_STATUS" | jq -r '.status')
 
