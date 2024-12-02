@@ -60,11 +60,11 @@ jobs:
         run: |
           echo "${{ env.approved_sha }}"
         
-          STATUS="${{ steps.checking_approval.outputs.conclusion }}"
-          DESCRIPTION="${{ steps.checking_approval.outputs.description }}"
+          STATUS="${{ env.conclusion }}"
+          DESCRIPTION="${{ env.description }}"
 
           CONTEXT="Approval Validation"
-          APPROVED_SHA="${{ steps.approve_sha.outputs.approved_sha }}"
+          APPROVED_SHA="${{ env.approved_sha }}"
 
           TARGET_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
       
