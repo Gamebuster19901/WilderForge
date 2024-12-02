@@ -15,17 +15,38 @@ jobs:
         github.event.review.user.login == 'Gamebuster19901'
       ) ||
       (
-        github.event.pull_request != null &&
-        github.event.sender.login == 'Gamebuster19901' &&
-        github.event.pull_request.user.login == 'Gamebuster19901' &&
-        startsWith(github.event.review.body, 'approved')
+        (
+          github.event.pull_request != null &&
+          github.event.sender.login == 'Gamebuster19901' &&
+          github.event.pull_request.user.login == 'Gamebuster19901'
+        ) &&
+        (
+          startsWith(github.event.review.body, 'approved') ||
+          startsWith(github.event.review.body, 'reject')
+        )
       )
     steps:
-      - name: Validate Commit SHA
-        id: "validate_sha"
+      - name: Checking Approval
+        id: "checking_approval"
         run: |
-          if [ "${{ github.event.pull_request.head.sha }}" != "${{ github.event.review.commit_id }}" ]; then
-            echo "Latest SHA in PR does not match approved version. Exiting."
+          DESC="null"
+          if [[ "${{ github.event.review.body }}" == approved* ]]; then
+            DESC="${{ github.event.review.user.login }} APPROVED build for ${{ github.event.review.commit_id }}"
+            echo $DESC
+            echo "conclusion=success" >> "$GITHUB_ENV"
+            echo "description=$DESC" >> "$GITHUB_ENV"
+            exit 0
+          elif [[ "${{ github.event.review.body }}" == reject* ]]; then
+            DESC="${{ github.event.review.user.login }} REJECTED build for ${{ github.event.review.commit_id }}"
+            echo $DESC
+            echo "conclusion=failure" >> "$GITHUB_ENV"
+            echo "description=$DESC" >> "$GITHUB_ENV"
+            exit 1
+          else
+            DESC="Assertion Error: Review body expected start with 'approved' or 'reject'. This step should have been skipped but it ran anyway!"
+            echo $DESC
+            echo "conclusion=failure" >> "$GITHUB_ENV"
+            echo "description=$DESC" >> "$GITHUB_ENV"
             exit 1
           fi
 
@@ -34,23 +55,19 @@ jobs:
         run: echo "approved_sha=${{ github.event.review.commit_id }}" >> $GITHUB_ENV
 
       - name: Post Status Check
-        if: always()  # Ensures this step always runs
+        if:
+          always()
         run: |
-
           echo "${{ env.approved_sha }}"
         
-          # Check the outcome of the validation step
-          if [ "${{ steps.validate_sha.outcome }}" == "success" ]; then
-            STATUS="success"
-            DESCRIPTION="Approval validated for commit"
-          else
-            STATUS="failure"
-            DESCRIPTION="Approval validation: failed"
-          fi
+          STATUS="${{ env.conclusion }}"
+          DESCRIPTION="${{ env.description }}"
 
           CONTEXT="Approval Validation"
-          APPROVED_SHA="${{ steps.approve_sha.outputs.approved_sha }}"
+          APPROVED_SHA="${{ github.event.review.commit_id }}"
 
+          TARGET_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+      
           # Post the status using GitHub API
           curl -s -X POST \
             -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
@@ -58,6 +75,7 @@ jobs:
             -d "{
               \"state\": \"$STATUS\",
               \"description\": \"$DESCRIPTION\",
-              \"context\": \"$CONTEXT\"
+              \"context\": \"Approval Validation\",
+              \"target_url\": \"$TARGET_URL\"
             }" \
             "https://api.github.com/repos/${{ github.repository }}/statuses/$APPROVED_SHA"
