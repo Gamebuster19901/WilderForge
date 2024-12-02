@@ -58,6 +58,8 @@ jobs:
         if:
           always()
         run: |
+          echo "${{ env.approved_sha }}"
+        
           STATUS="${{ steps.checking_approval.outputs.conclusion }}"
           DESCRIPTION="${{ steps.checking_approval.outputs.description }}"
 
