@@ -12,11 +12,23 @@ jobs:
       github.event.comment.body == '@WilderForge rebuild' &&
       github.event.issue.pull_request != null
     steps:
+      - name: Fetch Pull Request Details
+        id: fetch_pr_details
+        run: |
+          PR_URL=$(jq -r '.pull_request.url' <<< '${{ toJson(github.event.issue) }}')
+
+          echo "Fetching pull request details from: $PR_URL"
+
+          PR_DETAILS=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" "$PR_URL")
+          PR_SHA=$(echo "$PR_DETAILS" | jq -r '.head.sha')
+
+          echo "Pull Request SHA: $PR_SHA"
+          echo "pr_sha=$PR_SHA" >> $GITHUB_ENV
+
       - name: Fetch Approved Status
         id: fetch_status
         run: |
-          # Extract PR SHA using jq safely
-          PR_SHA=$(echo '${{ toJson(github.event.issue) }}' | jq -r '.pull_request.head.sha')
+          PR_SHA=${{ env.pr_sha }}
           CONTEXT="Approval Validation"
 
           echo "Fetching commit status for PR SHA: $PR_SHA in context: $CONTEXT"
@@ -44,12 +56,14 @@ jobs:
       - name: Verify Latest Commit Matches Approved SHA
         id: verify_sha
         run: |
-          LATEST_SHA=$(jq -r '.pull_request.head.sha' <<< "${{ toJson(github.event.issue) }}")
-          echo "Latest commit SHA: $LATEST_SHA"
-          echo "Approved commit SHA: ${{ env.approved_sha }}"
+          PR_SHA=${{ env.pr_sha }}
+          APPROVED_SHA=${{ env.approved_sha }}
 
-          if [ "$LATEST_SHA" != "${{ env.approved_sha }}" ]; then
-            echo "Latest commit SHA ($LATEST_SHA) does not match approved SHA (${{ env.approved_sha }}). Exiting."
+          echo "Latest commit SHA: $PR_SHA"
+          echo "Approved commit SHA: $APPROVED_SHA"
+
+          if [ "$PR_SHA" != "$APPROVED_SHA" ]; then
+            echo "Latest commit SHA ($PR_SHA) does not match approved SHA ($APPROVED_SHA). Exiting."
             exit 1
           fi
           echo "Latest commit matches the approved SHA. Proceeding with rebuild."
