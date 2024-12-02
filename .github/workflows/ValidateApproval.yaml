@@ -29,21 +29,21 @@ jobs:
       - name: Checking Approval
         id: "checking_approval"
         run: |
-          DESC = "null"
+          DESC="null"
           if [[ "${{ github.event.review.body }}" == approved* ]]; then
-            DESC = "${{ github.event.review.user.login }} APPROVED build for ${{ github.event.review.commit_id }}"
+            DESC="${{ github.event.review.user.login }} APPROVED build for ${{ github.event.review.commit_id }}"
             echo DESC
             echo "conclusion=success" >> $GITHUB_ENV"
             echo "description=$DESC >> $GITHUB_ENV"
             exit 0
           elif [[ "${{ github.event.review.body }}" == reject* ]]; then
-            DESC = "${{ github.event.review.user.login }} REJECTED build for ${{ github.event.review.commit_id }}"
+            DESC="${{ github.event.review.user.login }} REJECTED build for ${{ github.event.review.commit_id }}"
             echo DESC
             echo "conclusion=failure" >> $GITHUB_ENV"
             echo "description=$DESC >> $GITHUB_ENV"
             exit 1
           else
-            DESC = "Assertion Error: Review body expected start with 'approved' or 'reject'. This step should have been skipped but it ran anyway!"
+            DESC="Assertion Error: Review body expected start with 'approved' or 'reject'. This step should have been skipped but it ran anyway!"
             echo DESC
             echo "conclusion=failure" >> $GITHUB_ENV"
             echo "description=$DESC >> $GITHUB_ENV"
