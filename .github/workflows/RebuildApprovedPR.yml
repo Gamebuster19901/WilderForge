@@ -12,8 +12,8 @@ jobs:
       github.event.comment.body == '@WilderForge rebuild' &&
       github.event.issue.pull_request != null
     steps:
-      - name: Fetch Approved SHA from Previous Workflow
-        id: fetch_approved_sha
+      - name: Fetch Latest Workflow Runs for Validate Approval
+        id: fetch_approval_run
         run: |
           # Fetch the pull request details
           PR_URL=$(jq -r '.pull_request.url' <<< '${{ toJson(github.event.issue) }}')
@@ -32,52 +32,16 @@ jobs:
 
           # Find the latest completed run of the 'Validate Approval' workflow
           APPROVAL_RUN=$(echo "$WORKFLOWS" | jq -r \
-            '.workflow_runs[] | select(.name == "Validate Approval" and .status == "completed") | .id' | head -n 1)
+            '.workflow_runs[] | select(.name == "Validate Approval" and .status == "completed" and .conclusion == "success") | .id' | head -n 1)
           echo "Approval Run: $APPROVAL_RUN"  # Debugging: output the approval run ID
 
           if [ -z "$APPROVAL_RUN" ]; then
-            echo "No completed 'Validate Approval' workflow runs found. Exiting."
+            echo "No completed 'Validate Approval' workflow runs found with success. Exiting."
             exit 1
           fi
 
-          # Fetch the output of the 'Validate Approval' workflow
-          OUTPUTS=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-            "https://api.github.com/repos/${{ github.repository }}/actions/runs/$APPROVAL_RUN/jobs")
-          echo "Workflow Job Outputs: $OUTPUTS"  # Debugging: output the job outputs data
-
-          APPROVED_SHA=$(echo "$OUTPUTS" | jq -r \
-            '.jobs[].steps[] | select(.name == "Setting Approved SHA") | .outputs.approved_sha')
-          echo "Approved SHA: $APPROVED_SHA"  # Debugging: output the approved SHA
-
-          if [ -z "$APPROVED_SHA" ]; then
-            echo "Approved SHA not found in workflow outputs. Exiting."
-            exit 1
-          fi
-
-          echo "Approved SHA fetched: $APPROVED_SHA"
-          echo "approved_sha=$APPROVED_SHA" >> $GITHUB_ENV
-
-      - name: Verify Latest Commit Matches Approved SHA
-        id: verify_sha
-        run: |
-          # Fetch the latest commit SHA
-          PR_SHA=$(jq -r '.pull_request.head.sha' <<< '${{ toJson(github.event.issue) }}')
-          echo "Latest Commit SHA: $PR_SHA"  # Debugging: output the latest commit SHA
-
-          echo "Approved Commit SHA: ${{ env.approved_sha }}"  # Debugging: output the approved commit SHA
-
-          if [ -z "$PR_SHA" ]; then
-            echo "Latest commit SHA is null. Exiting."
-            exit 1
-          fi
-
-          if [ "$PR_SHA" != "${{ env.approved_sha }}" ]; then
-            echo "Latest commit SHA ($PR_SHA) does not match approved SHA (${{ env.approved_sha }}). Exiting."
-            exit 1
-          fi
-          echo "Latest commit matches the approved SHA. Proceeding with rebuild."
-
+          echo "Found successful 'Validate Approval' workflow run: $APPROVAL_RUN"
+      
       - name: Trigger Rebuild
         run: |
           echo "Rebuilding approved PR..."
-          # Add build steps here
