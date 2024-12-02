@@ -1,0 +1,54 @@
+name: Rebuild Approved PR
+
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  rebuild_approved_pr:
+    runs-on: ubuntu-latest
+    if: |
+      github.event.comment.user.login == 'Gamebuster19901' &&
+      github.event.comment.body == '@WilderForge rebuild' &&
+      github.event.issue.pull_request != null
+    steps:
+      - name: Fetch Approved Status
+        id: fetch_status
+        run: |
+          PR_SHA=$(jq -r '.pull_request.head.sha' <<< "${{ toJson(github.event.issue) }}")
+          CONTEXT="Approval Validation"
+
+          # Fetch the commit status for the context
+          RESPONSE=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/repos/${{ github.repository }}/commits/${PR_SHA}/status")
+
+          CONTEXT_STATUS=$(jq -r --arg CONTEXT "$CONTEXT" \
+            '.statuses[] | select(.context == $CONTEXT) | .state' <<< "$RESPONSE")
+          APPROVED_SHA=$(jq -r --arg CONTEXT "$CONTEXT" \
+            '.statuses[] | select(.context == $CONTEXT) | .description | match("for commit (.+)").captures[0].string' <<< "$RESPONSE")
+
+          echo "Context Status: $CONTEXT_STATUS"
+          echo "Approved SHA: $APPROVED_SHA"
+
+          echo "context_status=$CONTEXT_STATUS" >> $GITHUB_ENV
+          echo "approved_sha=$APPROVED_SHA" >> $GITHUB_ENV
+
+          if [ "$CONTEXT_STATUS" != "success" ]; then
+            echo "Approval Validation context status is not 'success'. Exiting."
+            exit 1
+          fi
+
+      - name: Verify Latest Commit Matches Approved SHA
+        id: verify_sha
+        run: |
+          LATEST_SHA=$(jq -r '.pull_request.head.sha' <<< "${{ toJson(github.event.issue) }}")
+          if [ "$LATEST_SHA" != "${{ env.approved_sha }}" ]; then
+            echo "Latest commit SHA ($LATEST_SHA) does not match approved SHA (${{ env.approved_sha }}). Exiting."
+            exit 1
+          fi
+          echo "Latest commit matches the approved SHA. Proceeding with rebuild."
+
+      - name: Trigger Rebuild
+        run: |
+          echo "Rebuilding approved PR..."
+          # build commands here
