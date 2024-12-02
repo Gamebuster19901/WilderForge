@@ -19,8 +19,8 @@ jobs:
           ref: ${{ github.event.inputs.sha }}
 
       # Step 2: Set up Gradle
-      - name: Set up Gradle
-        uses: gradle/wrapper-validation-action@v1
+      - name: Build with Gradle
+        uses: gradle/actions@v4.2.1
 
       # Step 3: Run the Gradle build
       - name: Build the project with Gradle
