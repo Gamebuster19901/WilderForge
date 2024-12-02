@@ -29,7 +29,7 @@ jobs:
       - name: Checking Approval
         id: "checking_approval"
         run: |
-          DESC = null
+          DESC = "null"
           if [[ "${{ github.event.review.body }}" == approved* ]]; then
             DESC = "${{ github.event.review.user.login }} APPROVED build for ${{ github.event.review.commit_id }}"
             echo DESC
